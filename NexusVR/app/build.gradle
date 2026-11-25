@@ -1,0 +1,32 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.nexusvr.app'
+    compileSdk 35
+    defaultConfig { applicationId 'com.nexusvr.app'; minSdk 24; targetSdk 34; versionCode 1; versionName '0.1.0' }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    androidResources { noCompress += ['task'] }
+    sourceSets { main { assets.srcDir(layout.buildDirectory.dir('generated/handAssets')) } }
+}
+def model = layout.buildDirectory.file('generated/handAssets/hand_landmarker.task')
+tasks.register('downloadHandModel') {
+    outputs.file(model)
+    doLast {
+        def f = model.get().asFile
+        f.parentFile.mkdirs()
+        def tmp = new File(f.parentFile, 'hand_landmarker.tmp')
+        def url = new URI('https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task').toURL()
+        def conn = url.openConnection(); conn.connectTimeout = 30000; conn.readTimeout = 60000
+        try { conn.inputStream.withCloseable { input -> tmp.withOutputStream { out -> out << input } }; if (tmp.length() < 1000000) throw new GradleException('Modelo incompleto'); java.nio.file.Files.move(tmp.toPath(), f.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING) } finally { tmp.delete() }
+    }
+}
+tasks.named('preBuild').configure { dependsOn('downloadHandModel') }
+dependencies {
+    implementation 'androidx.activity:activity:1.9.3'
+    implementation 'androidx.camera:camera-core:1.4.2'
+    implementation 'androidx.camera:camera-camera2:1.4.2'
+    implementation 'androidx.camera:camera-lifecycle:1.4.2'
+    implementation 'com.google.mediapipe:tasks-vision:0.10.20'
+    implementation 'androidx.media3:media3-exoplayer:1.5.1'
+    implementation 'androidx.media3:media3-exoplayer-hls:1.5.1'
+    implementation 'androidx.media3:media3-exoplayer-dash:1.5.1'
+}
